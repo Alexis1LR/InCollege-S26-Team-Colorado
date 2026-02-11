@@ -88,7 +88,7 @@
        01  WS-SP               PIC X VALUE "N".
        01  WS-CH               PIC X VALUE SPACE.
 
-      *> Pushback buffer 
+      *> Pushback buffer
        01  WS-PUSH-FLAG        PIC X VALUE "N".
        01  WS-PUSH-REC         PIC X(200) VALUE SPACES.
 
@@ -459,6 +459,8 @@
                PERFORM PRT
                MOVE "5. Learn a New Skill" TO WS-TEXT
                PERFORM PRT
+               MOVE "6. Logout" TO WS-TEXT
+               PERFORM PRT
                MOVE "Enter your choice:" TO WS-TEXT
                PERFORM PRT
 
@@ -483,6 +485,7 @@
                          TO WS-TEXT
                        PERFORM PRT
                    WHEN '5' PERFORM SKILL-MENU
+                   WHEN '6' MOVE "N" TO WS-RUN
                    WHEN OTHER
                        MOVE "Invalid choice, please try again." TO WS-TEXT
                        PERFORM PRT
@@ -786,12 +789,13 @@
            END-STRING
            PERFORM PRT
 
-           MOVE "Experience:" TO WS-TEXT
-           PERFORM PRT
+
            IF WS-EXP-COUNT = 0
-               MOVE " (none)" TO WS-TEXT
+               MOVE "Experience: None" TO WS-TEXT
                PERFORM PRT
            ELSE
+               MOVE "Experience:" TO WS-TEXT
+               PERFORM PRT
                PERFORM VARYING J FROM 1 BY 1 UNTIL J > WS-EXP-COUNT
                    MOVE SPACES TO WS-TEXT
                    STRING " Title: " DELIMITED BY SIZE
@@ -823,12 +827,13 @@
                END-PERFORM
            END-IF
 
-           MOVE "Education:" TO WS-TEXT
-           PERFORM PRT
+
            IF WS-EDU-COUNT = 0
-               MOVE " (none)" TO WS-TEXT
+               MOVE "Education: None" TO WS-TEXT
                PERFORM PRT
            ELSE
+               MOVE "Education:" TO WS-TEXT
+               PERFORM PRT
                PERFORM VARYING J FROM 1 BY 1 UNTIL J > WS-EDU-COUNT
                    MOVE SPACES TO WS-TEXT
                    STRING " Degree: " DELIMITED BY SIZE
