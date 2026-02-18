@@ -14,56 +14,41 @@ Welcome, TestUser!
 3. Search for a job
 4. Find someone you know
 5. Learn a New Skill
+6. View My Pending Connection Requests
 Enter your choice:
-2
---- Your Profile ---
-Name: Test User
-University: State University
-Major: Computer Science
-Graduation Year: 2025
-About Me: Passionate about software development.
-Experience:
-  Title: Intern
-  Company: Tech Solutions
-  Dates: Summer 2024
-  Description: Assisted with front-end development.
-Education:
-  Degree: Bachelor's
-  University: State University
-  Years: 2021-2025
---------------------
+6
+--- Pending Connection Requests ---
+You have no pending connection requests at this time.
+-----------------------------------
 1. Create/Edit My Profile
 2. View My Profile
 3. Search for a job
 4. Find someone you know
 5. Learn a New Skill
+6. View My Pending Connection Requests
 Enter your choice:
 4
 Enter the full name of the person you are looking for:
-Another Student
+New Student
 --- Found User Profile ---
-Name: Another Student
-University: City College
-Major: Electrical Engineering
-Graduation Year: 2026
-About Me: Robotics enthusiast.
+Name: New Student
+University: West Coast Uni
+Major: Business
+Graduation Year: 2027
+About Me:
 Experience: None
 Education: None
 -------------------------
-1. Create/Edit My Profile
-2. View My Profile
-3. Search for a job
-4. Find someone you know
-5. Learn a New Skill
+1. Send Connection Request
+2. Back to Main Menu
 Enter your choice:
-4
-Enter the full name of the person you are looking for:
-Nonexistent Person
-No one by that name could be found.
+1
+Connection request sent to New Student.
 1. Create/Edit My Profile
 2. View My Profile
 3. Search for a job
 4. Find someone you know
 5. Learn a New Skill
+6. View My Pending Connection Requests
 Enter your choice:
 --- END_OF_PROGRAM_EXECUTION ---

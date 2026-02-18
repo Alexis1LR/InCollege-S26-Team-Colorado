@@ -1,5 +1,5 @@
 *> ===============================================================
-      *> INCOLLEGE.CBL  (Epic #3: User Profile Management)
+      *> INCOLLEGE.CBL  (Epic #3: User Profile & Connection Requests)
       *> ===============================================================
        IDENTIFICATION DIVISION.
        PROGRAM-ID. INCOLLEGE.
@@ -18,6 +18,9 @@
            SELECT ACCT-TMP  ASSIGN TO "Accounts.tmp"
                ORGANIZATION IS LINE SEQUENTIAL
                FILE STATUS IS WS-ACCT-TMP-ST.
+           SELECT CONN-FILE ASSIGN TO "Connections.dat"
+               ORGANIZATION IS LINE SEQUENTIAL
+               FILE STATUS IS WS-CONN-ST.
        DATA DIVISION.
        FILE SECTION.
        FD  IN-FILE.
@@ -49,11 +52,18 @@
       *> Temp file uses the exact same record layout for easy copy
        FD  ACCT-TMP.
        01  ACCT-TMP-REC            PIC X(1500).
+      *> Connection requests file
+       FD  CONN-FILE.
+       01  CONN-REC.
+           05 CONN-SENDER          PIC X(20).
+           05 CONN-RECIP           PIC X(20).
+           05 CONN-STATUS          PIC X(1).
        WORKING-STORAGE SECTION.
        01  WS-IN-ST            PIC XX VALUE "00".
        01  WS-OUT-ST           PIC XX VALUE "00".
        01  WS-ACCT-ST          PIC XX VALUE "00".
        01  WS-ACCT-TMP-ST      PIC XX VALUE "00".
+       01  WS-CONN-ST          PIC XX VALUE "00".
        01  WS-EOF              PIC X  VALUE "N".
        01  WS-RUN              PIC X  VALUE "Y".
        01  WS-LOG              PIC X  VALUE "N".
@@ -108,6 +118,10 @@
        01  WS-SEARCH-NAME       PIC X(41) VALUE SPACES.
        01  WS-FOUND-USER        PIC X VALUE "N".
        01  WS-FULL-NAME         PIC X(41) VALUE SPACES.
+      *> Connection request variables
+       01  WS-FOUND-ACCT-USER   PIC X(20) VALUE SPACES.
+       01  WS-CONN-EXISTS       PIC X VALUE "N".
+       01  WS-PENDING-COUNT     PIC 99 VALUE 0.
        PROCEDURE DIVISION.
        MAIN.
            PERFORM STARTUP
@@ -403,6 +417,9 @@
                PERFORM PRT
                MOVE "5. Learn a New Skill" TO WS-TEXT
                PERFORM PRT
+               MOVE "6. View My Pending Connection Requests"
+                 TO WS-TEXT
+               PERFORM PRT
                MOVE "Enter your choice:" TO WS-TEXT
                PERFORM PRT
                PERFORM READIN
@@ -421,6 +438,7 @@
                        PERFORM PRT
                    WHEN '4' PERFORM USER-SEARCH
                    WHEN '5' PERFORM SKILL-MENU
+                   WHEN '6' PERFORM VIEW-PENDING-REQUESTS
                    WHEN OTHER
                        MOVE "Invalid choice, please try again." TO WS-TEXT
                        PERFORM PRT
@@ -872,6 +890,7 @@
            PERFORM ECHOIN
            MOVE IN-REC(1:41) TO WS-SEARCH-NAME
            MOVE "N" TO WS-FOUND-USER
+           MOVE SPACES TO WS-FOUND-ACCT-USER
            OPEN INPUT ACCT-FILE
            PERFORM UNTIL WS-ACCT-ST NOT = "00"
                READ ACCT-FILE
@@ -887,6 +906,7 @@
                        END-STRING
                        IF WS-FULL-NAME = WS-SEARCH-NAME
                            MOVE "Y" TO WS-FOUND-USER
+                           MOVE ACCT-USER TO WS-FOUND-ACCT-USER
                            PERFORM DISPLAY-FOUND-PROFILE
                            EXIT PERFORM
                        END-IF
@@ -896,6 +916,8 @@
            IF WS-FOUND-USER = "N"
                MOVE "No one by that name could be found." TO WS-TEXT
                PERFORM PRT
+           ELSE
+               PERFORM SEND-REQUEST-MENU
            END-IF.
       *> ---------------------------------------------------------------
       *> DISPLAY-FOUND-PROFILE: displays the profile from ACCT-REC
@@ -1009,3 +1031,8 @@
            END-IF
            MOVE "-------------------------" TO WS-TEXT
            PERFORM PRT.
+      *> ===============================================================
+      *> CONNECTION REQUEST COPYBOOKS
+      *> ===============================================================
+           COPY "SendRequest.cob".
+           COPY "ViewRequests.cob".
