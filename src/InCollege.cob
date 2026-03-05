@@ -1,5 +1,5 @@
-*> ===============================================================
-      *> INCOLLEGE.CBL  (Epic #3: User Profile & Connection Requests)
+      *> ===============================================================
+      *> INCOLLEGE.CBL  (Epic #5: Accept/Reject Connections & View Network)
       *> ===============================================================
        IDENTIFICATION DIVISION.
        PROGRAM-ID. INCOLLEGE.
@@ -21,6 +21,9 @@
            SELECT CONN-FILE ASSIGN TO "Connections.dat"
                ORGANIZATION IS LINE SEQUENTIAL
                FILE STATUS IS WS-CONN-ST.
+           SELECT CONN-TMP  ASSIGN TO "Connections.tmp"
+               ORGANIZATION IS LINE SEQUENTIAL
+               FILE STATUS IS WS-CONN-TMP-ST.
        DATA DIVISION.
        FILE SECTION.
        FD  IN-FILE.
@@ -58,12 +61,16 @@
            05 CONN-SENDER          PIC X(20).
            05 CONN-RECIP           PIC X(20).
            05 CONN-STATUS          PIC X(1).
+      *> Connections temp file (same layout, for in-place rewrite)
+       FD  CONN-TMP.
+       01  CONN-TMP-REC            PIC X(41).
        WORKING-STORAGE SECTION.
        01  WS-IN-ST            PIC XX VALUE "00".
        01  WS-OUT-ST           PIC XX VALUE "00".
        01  WS-ACCT-ST          PIC XX VALUE "00".
        01  WS-ACCT-TMP-ST      PIC XX VALUE "00".
        01  WS-CONN-ST          PIC XX VALUE "00".
+       01  WS-CONN-TMP-ST      PIC XX VALUE "00".
        01  WS-EOF              PIC X  VALUE "N".
        01  WS-RUN              PIC X  VALUE "Y".
        01  WS-LOG              PIC X  VALUE "N".
@@ -395,7 +402,7 @@
                END-IF
            END-PERFORM.
       *> ---------------------------------------------------------------
-      *> POST-MENU
+      *> POST-MENU  (GCOL-101: "7. View My Network" added)
       *> ---------------------------------------------------------------
        POST-MENU.
            MOVE SPACES TO WS-TEXT
@@ -420,6 +427,8 @@
                MOVE "6. View My Pending Connection Requests"
                  TO WS-TEXT
                PERFORM PRT
+               MOVE "7. View My Network" TO WS-TEXT
+               PERFORM PRT
                MOVE "Enter your choice:" TO WS-TEXT
                PERFORM PRT
                PERFORM READIN
@@ -439,6 +448,7 @@
                    WHEN '4' PERFORM USER-SEARCH
                    WHEN '5' PERFORM SKILL-MENU
                    WHEN '6' PERFORM VIEW-PENDING-REQUESTS
+                   WHEN '7' PERFORM VIEW-MY-NETWORK
                    WHEN OTHER
                        MOVE "Invalid choice, please try again." TO WS-TEXT
                        PERFORM PRT
@@ -1036,3 +1046,4 @@
       *> ===============================================================
            COPY "SendRequest.cob".
            COPY "ViewRequests.cob".
+           COPY "ViewNetwork.cob".
