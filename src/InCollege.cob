@@ -1,8 +1,10 @@
-      *> ===============================================================
-      *> INCOLLEGE.CBL  (Epic #5: Accept/Reject Connections & View Network)
+*> ===============================================================
+      *> INCOLLEGE.CBL
+      *> Existing system + Epic #4 Job Board + Epic #5 Connections
       *> ===============================================================
        IDENTIFICATION DIVISION.
        PROGRAM-ID. INCOLLEGE.
+
        ENVIRONMENT DIVISION.
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
@@ -24,12 +26,19 @@
            SELECT CONN-TMP  ASSIGN TO "Connections.tmp"
                ORGANIZATION IS LINE SEQUENTIAL
                FILE STATUS IS WS-CONN-TMP-ST.
+           SELECT JOB-FILE ASSIGN TO "Jobs.dat"
+               ORGANIZATION IS LINE SEQUENTIAL
+               FILE STATUS IS WS-JOB-ST.
+
        DATA DIVISION.
        FILE SECTION.
+
        FD  IN-FILE.
        01  IN-REC              PIC X(200).
+
        FD  OUT-FILE.
        01  OUT-REC             PIC X(200).
+
       *> Accounts.dat record layout: credentials + profile + 3 exp + 3 edu
        FD  ACCT-FILE.
        01  ACCT-REC.
@@ -52,18 +61,32 @@
               10 ACCT-EDU-DEG    PIC X(30).
               10 ACCT-EDU-SCH    PIC X(40).
               10 ACCT-EDU-YEARS  PIC X(15).
+
       *> Temp file uses the exact same record layout for easy copy
        FD  ACCT-TMP.
        01  ACCT-TMP-REC            PIC X(1500).
+
       *> Connection requests file
        FD  CONN-FILE.
        01  CONN-REC.
            05 CONN-SENDER          PIC X(20).
            05 CONN-RECIP           PIC X(20).
            05 CONN-STATUS          PIC X(1).
+
       *> Connections temp file (same layout, for in-place rewrite)
        FD  CONN-TMP.
        01  CONN-TMP-REC            PIC X(41).
+
+      *> Jobs file
+       FD  JOB-FILE.
+       01  JOB-REC.
+           05 JOB-ID               PIC 9(5).
+           05 JOB-TITLE            PIC X(50).
+           05 JOB-DESCRIPTION      PIC X(100).
+           05 JOB-EMPLOYER         PIC X(50).
+           05 JOB-LOCATION         PIC X(50).
+           05 JOB-SALARY           PIC X(20).
+
        WORKING-STORAGE SECTION.
        01  WS-IN-ST            PIC XX VALUE "00".
        01  WS-OUT-ST           PIC XX VALUE "00".
@@ -71,6 +94,7 @@
        01  WS-ACCT-TMP-ST      PIC XX VALUE "00".
        01  WS-CONN-ST          PIC XX VALUE "00".
        01  WS-CONN-TMP-ST      PIC XX VALUE "00".
+       01  WS-JOB-ST           PIC XX VALUE "00".
        01  WS-EOF              PIC X  VALUE "N".
        01  WS-RUN              PIC X  VALUE "Y".
        01  WS-LOG              PIC X  VALUE "N".
@@ -88,15 +112,19 @@
        01  WS-DI               PIC X VALUE "N".
        01  WS-SP               PIC X VALUE "N".
        01  WS-CH               PIC X VALUE SPACE.
+
       *> Pushback buffer
        01  WS-PUSH-FLAG        PIC X VALUE "N".
        01  WS-PUSH-REC         PIC X(200) VALUE SPACES.
+
       *> Track which WS-A index is logged in
        01  WS-CURRENT-IDX      PIC 9 VALUE 0.
+
        01  WS-ACCTS.
            05 WS-A OCCURS 5 TIMES.
               10 WS-USER       PIC X(20) VALUE SPACES.
               10 WS-PASS       PIC X(12) VALUE SPACES.
+
       *> In-memory profile for the current user
        01  WS-PROFILE.
            05 WS-FNAME          PIC X(20)  VALUE SPACES.
@@ -116,25 +144,37 @@
               10 WS-EDU-DEGREE  PIC X(30) VALUE SPACES.
               10 WS-EDU-SCHOOL  PIC X(40) VALUE SPACES.
               10 WS-EDU-YEARS   PIC X(15) VALUE SPACES.
+
        01  WS-YEAR-TXT          PIC X(20) VALUE SPACES.
        01  WS-YEAR-NUM          PIC 9(4)  VALUE 0.
        01  WS-VALID             PIC X VALUE "N".
+
       *> Commands for OS-level file swap
        01  WS-CMD               PIC X(120) VALUE SPACES.
+
       *> Search variables
        01  WS-SEARCH-NAME       PIC X(41) VALUE SPACES.
        01  WS-FOUND-USER        PIC X VALUE "N".
        01  WS-FULL-NAME         PIC X(41) VALUE SPACES.
+
       *> Connection request variables
        01  WS-FOUND-ACCT-USER   PIC X(20) VALUE SPACES.
        01  WS-CONN-EXISTS       PIC X VALUE "N".
        01  WS-PENDING-COUNT     PIC 99 VALUE 0.
+
+      *> Job variables
+       01  WS-JOB-ID            PIC 9(5) VALUE 0.
+       01  WS-JOB-COUNT         PIC 9(5) VALUE 0.
+       01  WS-SALARY-ANSWER     PIC X VALUE SPACE.
+       01  WS-JOB-EOF           PIC X VALUE "N".
+
        PROCEDURE DIVISION.
        MAIN.
            PERFORM STARTUP
            PERFORM TOP-MENU UNTIL WS-RUN = "N"
            PERFORM SHUTDOWN
            STOP RUN.
+
       *> ---------------------------------------------------------------
       *> STARTUP: open files, load accounts, prime input (pushback)
       *> ---------------------------------------------------------------
@@ -149,11 +189,13 @@
                MOVE IN-REC TO WS-PUSH-REC
                MOVE "Y" TO WS-PUSH-FLAG
            END-IF.
+
        SHUTDOWN.
            MOVE "--- END_OF_PROGRAM_EXECUTION ---" TO WS-TEXT
            PERFORM PRT
            CLOSE IN-FILE
            CLOSE OUT-FILE.
+
       *> ---------------------------------------------------------------
       *> PRT: display and write to output file
       *> ---------------------------------------------------------------
@@ -161,6 +203,7 @@
            MOVE WS-TEXT TO OUT-REC
            DISPLAY FUNCTION TRIM(WS-TEXT TRAILING)
            WRITE OUT-REC.
+
       *> ---------------------------------------------------------------
       *> READIN: reads next line from input; supports pushback
       *> ---------------------------------------------------------------
@@ -175,6 +218,7 @@
                    MOVE "Y" TO WS-EOF
                    MOVE SPACES TO IN-REC
            END-READ.
+
       *> ---------------------------------------------------------------
       *> ECHOIN: echoes input line to terminal and output file
       *> ---------------------------------------------------------------
@@ -182,6 +226,7 @@
            MOVE IN-REC TO OUT-REC
            DISPLAY FUNCTION TRIM(IN-REC TRAILING)
            WRITE OUT-REC.
+
       *> ---------------------------------------------------------------
       *> LOAD-ACCTS: loads up to 5 accounts into memory (user/pass)
       *> ---------------------------------------------------------------
@@ -204,6 +249,7 @@
                END-READ
            END-PERFORM
            CLOSE ACCT-FILE.
+
       *> ---------------------------------------------------------------
       *> SAVE-ACCT: appends a new account record with blank profile
       *> ---------------------------------------------------------------
@@ -224,6 +270,7 @@
            END-PERFORM
            WRITE ACCT-REC
            CLOSE ACCT-FILE.
+
       *> ---------------------------------------------------------------
       *> TOP-MENU: Welcome / Login / Create New Account
       *> ---------------------------------------------------------------
@@ -253,6 +300,7 @@
                    PERFORM PRT
                END-IF
            END-IF.
+
       *> ---------------------------------------------------------------
       *> CREATE-FLOW: create up to 5 accounts, unique username, valid pass
       *> ---------------------------------------------------------------
@@ -305,6 +353,7 @@
            PERFORM SAVE-ACCT
            MOVE "Account created successfully." TO WS-TEXT
            PERFORM PRT.
+
       *> ---------------------------------------------------------------
       *> CHECK-USER: WS-OK = N if username already exists
       *> ---------------------------------------------------------------
@@ -315,6 +364,7 @@
                    MOVE "N" TO WS-OK
                END-IF
            END-PERFORM.
+
       *> ---------------------------------------------------------------
       *> CHECK-PASS: WS-OK = Y if 8-12 chars, 1 uppercase, 1 digit, 1 special
       *> ---------------------------------------------------------------
@@ -341,7 +391,6 @@
                IF WS-CH >= "0" AND WS-CH <= "9"
                    MOVE "Y" TO WS-DI
                END-IF
-               *> If not alphanumeric, consider it a special char
                IF NOT ( (WS-CH >= "a" AND WS-CH <= "z")
                     OR (WS-CH >= "A" AND WS-CH <= "Z")
                     OR (WS-CH >= "0" AND WS-CH <= "9") )
@@ -351,6 +400,7 @@
            IF WS-UP = "Y" AND WS-DI = "Y" AND WS-SP = "Y"
                MOVE "Y" TO WS-OK
            END-IF.
+
       *> ---------------------------------------------------------------
       *> LOGIN-FLOW: loop until success or EOF
       *> ---------------------------------------------------------------
@@ -387,6 +437,7 @@
                    PERFORM PRT
                END-IF
            END-PERFORM.
+
       *> ---------------------------------------------------------------
       *> CHECK-CRED: validates username/pass and sets current user index
       *> ---------------------------------------------------------------
@@ -401,8 +452,9 @@
                    END-IF
                END-IF
            END-PERFORM.
+
       *> ---------------------------------------------------------------
-      *> POST-MENU  (GCOL-101: "7. View My Network" added)
+      *> POST-MENU
       *> ---------------------------------------------------------------
        POST-MENU.
            MOVE SPACES TO WS-TEXT
@@ -441,10 +493,7 @@
                EVALUATE WS-CHOICE
                    WHEN '1' PERFORM PROFILE-CREATE-EDIT
                    WHEN '2' PERFORM PROFILE-VIEW
-                   WHEN '3'
-                       MOVE "Job search/internship is under construction."
-                         TO WS-TEXT
-                       PERFORM PRT
+                   WHEN '3' PERFORM JOB-MENU
                    WHEN '4' PERFORM USER-SEARCH
                    WHEN '5' PERFORM SKILL-MENU
                    WHEN '6' PERFORM VIEW-PENDING-REQUESTS
@@ -454,6 +503,147 @@
                        PERFORM PRT
                END-EVALUATE
            END-PERFORM.
+
+      *> ---------------------------------------------------------------
+      *> JOB-MENU
+      *> ---------------------------------------------------------------
+       JOB-MENU.
+           MOVE "Job search/internship menu:" TO WS-TEXT
+           PERFORM PRT
+           MOVE "1. Post a Job/Internship" TO WS-TEXT
+           PERFORM PRT
+           MOVE "2. Browse Jobs/Internships" TO WS-TEXT
+           PERFORM PRT
+           MOVE "3. Go Back" TO WS-TEXT
+           PERFORM PRT
+           MOVE "Enter your choice:" TO WS-TEXT
+           PERFORM PRT
+           PERFORM READIN
+           IF WS-EOF = "Y"
+               EXIT PARAGRAPH
+           END-IF
+           PERFORM ECHOIN
+           MOVE IN-REC(1:1) TO WS-CHOICE
+           EVALUATE WS-CHOICE
+               WHEN '1'
+                   PERFORM POST-JOB
+               WHEN '2'
+                   PERFORM BROWSE-JOBS
+               WHEN '3'
+                   CONTINUE
+               WHEN OTHER
+                   MOVE "Invalid choice, please try again." TO WS-TEXT
+                   PERFORM PRT
+           END-EVALUATE.
+
+      *> ---------------------------------------------------------------
+      *> GET-NEXT-JOB-ID
+      *> ---------------------------------------------------------------
+       GET-NEXT-JOB-ID.
+           MOVE 0 TO WS-JOB-COUNT
+           MOVE "N" TO WS-JOB-EOF
+           OPEN INPUT JOB-FILE
+           IF WS-JOB-ST = "35"
+               OPEN OUTPUT JOB-FILE
+               CLOSE JOB-FILE
+               OPEN INPUT JOB-FILE
+           END-IF
+           PERFORM UNTIL WS-JOB-EOF = "Y"
+               READ JOB-FILE
+                   AT END
+                       MOVE "Y" TO WS-JOB-EOF
+                   NOT AT END
+                       ADD 1 TO WS-JOB-COUNT
+               END-READ
+           END-PERFORM
+           CLOSE JOB-FILE
+           COMPUTE WS-JOB-ID = WS-JOB-COUNT + 1.
+
+      *> ---------------------------------------------------------------
+      *> POST-JOB
+      *> ---------------------------------------------------------------
+       POST-JOB.
+           PERFORM GET-NEXT-JOB-ID
+           MOVE WS-JOB-ID TO JOB-ID
+
+           MOVE "Enter job title:" TO WS-TEXT
+           PERFORM PRT
+           PERFORM READIN
+           IF WS-EOF = "Y"
+               EXIT PARAGRAPH
+           END-IF
+           PERFORM ECHOIN
+           MOVE IN-REC(1:50) TO JOB-TITLE
+
+           MOVE "Enter job description:" TO WS-TEXT
+           PERFORM PRT
+           PERFORM READIN
+           IF WS-EOF = "Y"
+               EXIT PARAGRAPH
+           END-IF
+           PERFORM ECHOIN
+           MOVE IN-REC(1:100) TO JOB-DESCRIPTION
+
+           MOVE "Enter employer:" TO WS-TEXT
+           PERFORM PRT
+           PERFORM READIN
+           IF WS-EOF = "Y"
+               EXIT PARAGRAPH
+           END-IF
+           PERFORM ECHOIN
+           MOVE IN-REC(1:50) TO JOB-EMPLOYER
+
+           MOVE "Enter location:" TO WS-TEXT
+           PERFORM PRT
+           PERFORM READIN
+           IF WS-EOF = "Y"
+               EXIT PARAGRAPH
+           END-IF
+           PERFORM ECHOIN
+           MOVE IN-REC(1:50) TO JOB-LOCATION
+
+           MOVE "Would you like to include a salary? (Y/N):" TO WS-TEXT
+           PERFORM PRT
+           PERFORM READIN
+           IF WS-EOF = "Y"
+               EXIT PARAGRAPH
+           END-IF
+           PERFORM ECHOIN
+           MOVE IN-REC(1:1) TO WS-SALARY-ANSWER
+
+           IF WS-SALARY-ANSWER = "Y" OR WS-SALARY-ANSWER = "y"
+               MOVE "Enter salary:" TO WS-TEXT
+               PERFORM PRT
+               PERFORM READIN
+               IF WS-EOF = "Y"
+                   EXIT PARAGRAPH
+               END-IF
+               PERFORM ECHOIN
+               MOVE IN-REC(1:20) TO JOB-SALARY
+           ELSE
+               MOVE "N/A" TO JOB-SALARY
+           END-IF
+
+           OPEN EXTEND JOB-FILE
+           IF WS-JOB-ST = "35"
+               OPEN OUTPUT JOB-FILE
+               CLOSE JOB-FILE
+               OPEN EXTEND JOB-FILE
+           END-IF
+           WRITE JOB-REC
+           CLOSE JOB-FILE
+
+           MOVE "Job/Internship posted successfully." TO WS-TEXT
+           PERFORM PRT.
+
+      *> ---------------------------------------------------------------
+      *> BROWSE-JOBS
+      *> ---------------------------------------------------------------
+       BROWSE-JOBS.
+           MOVE "Browse Jobs/Internships is under construction."
+             TO WS-TEXT
+           PERFORM PRT.
+
       *> ---------------------------------------------------------------
       *> SKILL-MENU
       *> ---------------------------------------------------------------
@@ -484,17 +674,15 @@
                MOVE "This skill is under construction." TO WS-TEXT
                PERFORM PRT
            END-IF.
+
       *> ===============================================================
       *> PROFILE MANAGEMENT
       *> ===============================================================
-      *> ---------------------------------------------------------------
-      *> PROFILE-CREATE-EDIT: prompts user for profile fields and saves
-      *> ---------------------------------------------------------------
        PROFILE-CREATE-EDIT.
            MOVE "--- Create/Edit Profile ---" TO WS-TEXT
            PERFORM PRT
            PERFORM PROFILE-LOAD-FOR-USER
-      *> Required field: First Name
+
            MOVE "N" TO WS-VALID
            PERFORM UNTIL WS-VALID = "Y"
                MOVE "Enter First Name:" TO WS-TEXT
@@ -510,7 +698,7 @@
                    MOVE "Y" TO WS-VALID
                END-IF
            END-PERFORM
-      *> Required field: Last Name
+
            MOVE "N" TO WS-VALID
            PERFORM UNTIL WS-VALID = "Y"
                MOVE "Enter Last Name:" TO WS-TEXT
@@ -526,7 +714,7 @@
                    MOVE "Y" TO WS-VALID
                END-IF
            END-PERFORM
-      *> Required field: University/College Attended
+
            MOVE "N" TO WS-VALID
            PERFORM UNTIL WS-VALID = "Y"
                MOVE "Enter University/College Attended:" TO WS-TEXT
@@ -542,7 +730,7 @@
                    MOVE "Y" TO WS-VALID
                END-IF
            END-PERFORM
-      *> Required field: Major
+
            MOVE "N" TO WS-VALID
            PERFORM UNTIL WS-VALID = "Y"
                MOVE "Enter Major:" TO WS-TEXT
@@ -558,9 +746,9 @@
                    MOVE "Y" TO WS-VALID
                END-IF
            END-PERFORM
-      *> Required field: Graduation Year (YYYY numeric)
+
            PERFORM PROMPT-GRAD-YEAR
-      *> Optional: About Me (blank allowed)
+
            MOVE "Enter About Me (optional, max 200 chars, enter blank line to skip):"
              TO WS-TEXT
            PERFORM PRT
@@ -568,15 +756,13 @@
            IF WS-EOF = "Y" EXIT PARAGRAPH END-IF
            PERFORM ECHOIN
            MOVE IN-REC(1:200) TO WS-ABOUT
-      *> Optional lists
+
            PERFORM PROMPT-EXPERIENCE
            PERFORM PROMPT-EDUCATION
            PERFORM PROFILE-SAVE
            MOVE "Profile saved successfully." TO WS-TEXT
            PERFORM PRT.
-      *> ---------------------------------------------------------------
-      *> PROMPT-GRAD-YEAR: prompts for a valid 4-digit year
-      *> ---------------------------------------------------------------
+
        PROMPT-GRAD-YEAR.
            MOVE "N" TO WS-VALID
            PERFORM UNTIL WS-VALID = "Y"
@@ -606,9 +792,7 @@
                    END-IF
                END-IF
            END-PERFORM.
-      *> ---------------------------------------------------------------
-      *> PROMPT-EXPERIENCE: prompts for up to 3 experience entries
-      *> ---------------------------------------------------------------
+
        PROMPT-EXPERIENCE.
            MOVE "How many experience entries (0-3):" TO WS-TEXT
            PERFORM PRT
@@ -656,9 +840,7 @@
                PERFORM ECHOIN
                MOVE IN-REC(1:100) TO WS-EXP-DESC(J)
            END-PERFORM.
-      *> ---------------------------------------------------------------
-      *> PROMPT-EDUCATION: prompts for up to 3 education entries
-      *> ---------------------------------------------------------------
+
        PROMPT-EDUCATION.
            MOVE "How many education entries (0-3):" TO WS-TEXT
            PERFORM PRT
@@ -700,9 +882,7 @@
                PERFORM ECHOIN
                MOVE IN-REC(1:15) TO WS-EDU-YEARS(J)
            END-PERFORM.
-      *> ---------------------------------------------------------------
-      *> PROFILE-LOAD-FOR-USER: loads the current user's profile into WS
-      *> ---------------------------------------------------------------
+
        PROFILE-LOAD-FOR-USER.
            OPEN INPUT ACCT-FILE
            MOVE 0 TO I
@@ -734,9 +914,7 @@
                END-READ
            END-PERFORM
            CLOSE ACCT-FILE.
-      *> ---------------------------------------------------------------
-      *> PROFILE-SAVE: rewrites the entire accounts file with updates
-      *> ---------------------------------------------------------------
+
        PROFILE-SAVE.
            OPEN INPUT ACCT-FILE
            OPEN OUTPUT ACCT-TMP
@@ -773,9 +951,7 @@
            CLOSE ACCT-FILE
            CLOSE ACCT-TMP
            CALL "SYSTEM" USING "mv Accounts.tmp Accounts.dat".
-      *> ---------------------------------------------------------------
-      *> PROFILE-VIEW: displays the current user's profile
-      *> ---------------------------------------------------------------
+
        PROFILE-VIEW.
            PERFORM PROFILE-LOAD-FOR-USER
            MOVE "--- Your Profile ---" TO WS-TEXT
@@ -886,9 +1062,7 @@
            END-IF
            MOVE "--------------------" TO WS-TEXT
            PERFORM PRT.
-      *> ---------------------------------------------------------------
-      *> USER-SEARCH: search for other users by full name
-      *> ---------------------------------------------------------------
+
        USER-SEARCH.
            MOVE "Enter the full name of the person you are looking for:"
              TO WS-TEXT
@@ -929,9 +1103,7 @@
            ELSE
                PERFORM SEND-REQUEST-MENU
            END-IF.
-      *> ---------------------------------------------------------------
-      *> DISPLAY-FOUND-PROFILE: displays the profile from ACCT-REC
-      *> ---------------------------------------------------------------
+
        DISPLAY-FOUND-PROFILE.
            MOVE "--- Found User Profile ---" TO WS-TEXT
            PERFORM PRT
@@ -1041,6 +1213,7 @@
            END-IF
            MOVE "-------------------------" TO WS-TEXT
            PERFORM PRT.
+
       *> ===============================================================
       *> CONNECTION REQUEST COPYBOOKS
       *> ===============================================================
