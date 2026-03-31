@@ -29,6 +29,9 @@
            SELECT JOB-FILE ASSIGN TO "Jobs.dat"
                ORGANIZATION IS LINE SEQUENTIAL
                FILE STATUS IS WS-JOB-ST.
+           SELECT APP-FILE ASSIGN TO "Applications.dat"
+               ORGANIZATION IS LINE SEQUENTIAL
+               FILE STATUS IS WS-APP-ST.
 
        DATA DIVISION.
        FILE SECTION.
@@ -86,6 +89,11 @@
            05 JOB-EMPLOYER         PIC X(50).
            05 JOB-LOCATION         PIC X(50).
            05 JOB-SALARY           PIC X(20).
+
+       FD  APP-FILE.
+       01  APP-REC.
+           05 APP-JOB-ID               PIC 9(5).
+           05 APP-USER                 PIC X(20).
 
        WORKING-STORAGE SECTION.
        01  WS-IN-ST            PIC XX VALUE "00".
@@ -167,6 +175,13 @@
        01  WS-JOB-COUNT         PIC 9(5) VALUE 0.
        01  WS-SALARY-ANSWER     PIC X VALUE SPACE.
        01  WS-JOB-EOF           PIC X VALUE "N".
+
+       01  WS-SELECTED-JOB-TXT  PIC X(5) VALUE SPACES.
+       01  WS-SELECTED-JOB      PIC 9(5) VALUE 0.
+       01  WS-JOB-FOUND         PIC X VALUE "N".
+       01  WS-SUB-CHOICE        PIC X VALUE SPACE.
+
+       01  WS-APP-ST           PIC XX VALUE "00".
 
        PROCEDURE DIVISION.
        MAIN.
@@ -508,13 +523,15 @@
       *> JOB-MENU
       *> ---------------------------------------------------------------
        JOB-MENU.
-           MOVE "Job search/internship menu:" TO WS-TEXT
+           MOVE "--- Job Search/Internship Menu ---" TO WS-TEXT
            PERFORM PRT
            MOVE "1. Post a Job/Internship" TO WS-TEXT
            PERFORM PRT
            MOVE "2. Browse Jobs/Internships" TO WS-TEXT
            PERFORM PRT
-           MOVE "3. Go Back" TO WS-TEXT
+           MOVE "3. View My Applications" TO WS-TEXT
+           PERFORM PRT
+           MOVE "4. Back to Main Menu" TO WS-TEXT
            PERFORM PRT
            MOVE "Enter your choice:" TO WS-TEXT
            PERFORM PRT
@@ -530,6 +547,8 @@
                WHEN '2'
                    PERFORM BROWSE-JOBS
                WHEN '3'
+                   PERFORM VIEW-APPLICATIONS
+               WHEN '4'
                    CONTINUE
                WHEN OTHER
                    MOVE "Invalid choice, please try again." TO WS-TEXT
@@ -636,13 +655,7 @@
            MOVE "Job/Internship posted successfully." TO WS-TEXT
            PERFORM PRT.
 
-      *> ---------------------------------------------------------------
-      *> BROWSE-JOBS
-      *> ---------------------------------------------------------------
-       BROWSE-JOBS.
-           MOVE "Browse Jobs/Internships is under construction."
-             TO WS-TEXT
-           PERFORM PRT.
+
 
       *> ---------------------------------------------------------------
       *> SKILL-MENU
@@ -1220,3 +1233,8 @@
            COPY "SendRequest.cob".
            COPY "ViewRequests.cob".
            COPY "ViewNetwork.cob".
+      *> ===============================================================
+      *> JOB SYSTEM COPYBOOKS
+      *> ===============================================================
+           COPY "ApplyJob.cob".
+           COPY "ViewApplications.cob".

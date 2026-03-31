@@ -1,0 +1,23 @@
+# VS Code
+.vscode/*
+.vscode/
+!.vscode/tasks.json
+
+# Devcontainer local stuff
+.devcontainer/local-*
+.devcontainer/
+
+# Build outputs
+bin/
+*.o
+*.obj
+*.exe
+*.out
+
+# OS
+.DS_Store
+Thumbs.db
+
+*.txt
+*.dat
+Personal-Tests/
