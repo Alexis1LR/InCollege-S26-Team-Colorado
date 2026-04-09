@@ -110,14 +110,18 @@ BROWSE-JOBS.
 
                            PERFORM JOB-ACTION-MENU
                        END-IF
+
                END-READ
            END-PERFORM
            CLOSE JOB-FILE
+
 
            IF WS-JOB-FOUND = "N"
                MOVE "Job not found." TO WS-TEXT
                PERFORM PRT
            END-IF.
+
+
 
        JOB-ACTION-MENU.
            MOVE "1. Apply for this Job" TO WS-TEXT

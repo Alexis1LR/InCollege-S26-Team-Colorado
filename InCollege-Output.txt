@@ -1,0 +1,53 @@
+Welcome to InCollege!
+1. Log In
+2. Create New Account
+Enter your choice:
+1
+Please enter your username:
+ReceivingUser
+Please enter your password:
+Password4!
+You have successfully logged in.
+Welcome, ReceivingUser!
+1. Create/Edit My Profile
+2. View My Profile
+3. Search for a job
+4. Find someone you know
+5. Learn a New Skill
+6. View My Pending Connection Requests
+7. View My Network
+8. Messages
+Enter your choice:
+8
+--- Messages Menu ---
+1. Send a New Message
+2. View My Messages
+3. Back to Main Menu
+Enter your choice:
+2
+--- Your Messages ---
+From: SendingUser
+Message: Hi there! Glad we connected on InCollege.
+Sent: 2025-07-28 10:30:00
+---
+From: AnotherConnection
+Message: Check out this interesting job posting I found!
+Sent: 2025-07-29 09:15:00
+---
+---------------------
+--- Messages Menu ---
+1. Send a New Message
+2. View My Messages
+3. Back to Main Menu
+Enter your choice:
+3
+1. Create/Edit My Profile
+2. View My Profile
+3. Search for a job
+4. Find someone you know
+5. Learn a New Skill
+6. View My Pending Connection Requests
+7. View My Network
+8. Messages
+Enter your choice:
+--- END_OF_PROGRAM_EXECUTION ---

@@ -1,0 +1,4 @@
+SendingUser         ReceivingUser       C
+ReceivingUser       SendingUser         C
+AnotherConnection   ReceivingUser       C
+ReceivingUser       AnotherConnection   C
